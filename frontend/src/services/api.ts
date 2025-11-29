@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { Product, Customer, Invoice, User } from '../types';
 import { StorageService } from './storage';

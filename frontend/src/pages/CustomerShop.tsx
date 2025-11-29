@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import { Search, Filter, ShoppingBag, ShoppingCart, X, Plus, Minus, Check, CreditCard, Zap } from 'lucide-react';

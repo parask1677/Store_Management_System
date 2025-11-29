@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Package, Users, FileText, BarChart3, LogOut, Menu, X, ShoppingBag, Clock, ClipboardList } from 'lucide-react';

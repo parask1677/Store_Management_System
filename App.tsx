@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
@@ -13,7 +12,7 @@ import { CustomerShop } from './pages/CustomerShop';
 import { CustomerOrders } from './pages/CustomerOrders';
 import { DataProvider, useData } from './context/DataContext';
 
-const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole?: 'admin' | 'customer' }) => {
+const ProtectedRoute = ({ children, allowedRole }: { children?: React.ReactNode, allowedRole?: 'admin' | 'customer' }) => {
   const { user } = useData();
   
   if (!user) return <Navigate to="/login" />;

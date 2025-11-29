@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useData } from '../context/DataContext';
 import { DollarSign, ShoppingCart, Package, AlertTriangle, TrendingUp, Users } from 'lucide-react';

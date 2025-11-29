@@ -1,6 +1,76 @@
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Customer = require('../models/Customer');
+
+// @desc    Register new user
+// @route   POST /api/auth/register
+// @access  Public
+const registerUser = async (req, res) => {
+  const { name, email, password, role, phone, address } = req.body;
+
+  try {
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Please add all fields' });
+    }
+
+    // Check if user exists
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: 'User already exists' });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // 1. Create User (For Authentication)
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: role || 'customer'
+    });
+
+    // 2. If role is Customer, ALSO create a Customer Record (For Business Data)
+    if (user && role === 'customer') {
+        // Check if customer profile exists to avoid duplicates
+        const customerExists = await Customer.findOne({ email });
+        if (!customerExists) {
+            await Customer.create({
+                name,
+                email,
+                phone: phone || '',
+                address: address || '',
+                totalSpent: 0
+            });
+        }
+    }
+
+    if (user) {
+      const token = jwt.sign(
+        { id: user._id, role: user.role },
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '1d' }
+      );
+
+      res.status(201).json({
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        },
+        token
+      });
+    } else {
+      res.status(400).json({ message: 'Invalid user data' });
+    }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 // @desc    Login user
 // @route   POST /api/auth/login
@@ -17,7 +87,7 @@ const loginUser = async (req, res) => {
       let name = 'New User';
       let role = 'customer';
 
-      if (email === 'admin@nexus.com') {
+      if (email === 'admin@nexus.com' || email === 'admin@kpstore.com') {
         name = 'Admin User';
         role = 'admin';
       } else if (email === 'dev@example.com') {
@@ -60,4 +130,4 @@ const loginUser = async (req, res) => {
   }
 };
 
-module.exports = { loginUser };
+module.exports = { loginUser, registerUser };
