@@ -1,6 +1,8 @@
+
 const Invoice = require('../models/Invoice');
 const Product = require('../models/Product');
 const Customer = require('../models/Customer');
+const OrderedProduct = require('../models/OrderedProduct');
 
 const INITIAL_INVOICES = [
   { 
@@ -41,23 +43,64 @@ const getInvoices = async (req, res) => {
 
 const createInvoice = async (req, res) => {
   try {
-    const { items, customerName, total } = req.body;
+    const { items, customerName, total, date } = req.body;
     
-    // 1. Generate Custom ID
+    // 1. Generate Custom ID for visual tracking
     const displayId = 'INV-' + Math.floor(1000 + Math.random() * 9000);
 
-    // 2. Create Invoice
-    const invoice = await Invoice.create({ ...req.body, displayId });
+    // 2. Sanitize Items for Invoice Schema
+    // We strictly map only the fields defined in the Invoice Item schema to avoid validation errors
+    const sanitizedItems = items.map(item => ({
+      id: item.id || 'unknown_id',
+      name: item.name,
+      price: Number(item.price),
+      quantity: Number(item.quantity),
+      image: item.image || '',
+      category: item.category || 'General'
+    }));
 
-    // 3. Decrease Stock & Update Customer
+    // 3. Create Invoice
+    const invoice = await Invoice.create({ 
+      ...req.body, 
+      displayId,
+      items: sanitizedItems 
+    });
+
+    // 4. Save Ordered Products (Sales Line Items) to separate collection
+    // This allows for granular analytics on products sold
+    if (items && items.length > 0) {
+      const orderedProductsData = items.map(item => ({
+        invoiceId: displayId,
+        customerName: customerName,
+        productId: item.id || 'unknown',
+        productName: item.name,
+        category: item.category || 'General',
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+        total: Number(item.price) * Number(item.quantity),
+        image: item.image || '',
+        date: date ? new Date(date) : new Date()
+      }));
+      
+      await OrderedProduct.insertMany(orderedProductsData);
+    }
+
+    // 5. Decrease Stock
+    // We only update stock if we have a valid database ID (length check is a simple heuristic for MongoDB ObjectIds)
     if (items && items.length > 0) {
       for (const item of items) {
         if (item.id && item.id.length > 10) {
-          await Product.findByIdAndUpdate(item.id, { $inc: { stock: -item.quantity } });
+          try {
+            await Product.findByIdAndUpdate(item.id, { $inc: { stock: -item.quantity } });
+          } catch (stockErr) {
+            console.error(`Failed to update stock for product ${item.id}:`, stockErr.message);
+            // Continue processing other items even if one stock update fails
+          }
         }
       }
     }
 
+    // 6. Update Customer Total Spent
     await Customer.findOneAndUpdate(
       { name: customerName },
       { $inc: { totalSpent: total } }
@@ -65,6 +108,7 @@ const createInvoice = async (req, res) => {
     
     res.status(201).json(invoice);
   } catch (err) {
+    console.error("Create Invoice Error:", err);
     res.status(400).json({ message: err.message });
   }
 };
