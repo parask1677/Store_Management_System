@@ -1,0 +1,5 @@
+{
+  "name": "storeSYS",
+  "description": "A comprehensive, modern Store Management System featuring a dark-themed dashboard for inventory, billing, customers, and sales analytics. This is a fully functional frontend-only demo using LocalStorage to simulate a backend database.",
+  "requestFramePermissions": []
+}
